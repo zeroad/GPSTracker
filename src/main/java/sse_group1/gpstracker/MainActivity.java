@@ -83,5 +83,6 @@ public class MainActivity extends Activity implements LocationListener {
     public void onProviderDisabled(String provider) {
         Toast.makeText(this, "Disabled provider " + provider,
                 Toast.LENGTH_SHORT).show();
+        //test
     }
 }
