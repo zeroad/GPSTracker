@@ -6,18 +6,46 @@ import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
+import com.google.android.gms.common.api.GoogleApiClient;
+
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.RequestBody;
+import okhttp3.Request;
+import okhttp3.Response;
+
 public class MainActivity extends Activity implements LocationListener {
     private TextView latitudeField;
     private TextView longitudeField;
+    private TextView altitudeField;
     private LocationManager locationManager;
     private String provider;
 
-    /** Called when the activity is first created. */
+    private static String deviceId = null;
+    private static String serial = "1234";
+    private static String deviceName = "newDevice";
+    private static String ultraSecureEncodedDigest = "Basic SGZUTC1Hcm91cC0xOk1va2VsZXQxMw==";
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client2;
+
+    /**
+     * Called when the activity is first created.
+     */
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -25,6 +53,7 @@ public class MainActivity extends Activity implements LocationListener {
         setContentView(R.layout.activity_main);
         latitudeField = (TextView) findViewById(R.id.TextView02);
         longitudeField = (TextView) findViewById(R.id.TextView04);
+        altitudeField = (TextView) findViewById(R.id.TextView06);
 
         // Get the location manager
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -41,7 +70,11 @@ public class MainActivity extends Activity implements LocationListener {
         } else {
             latitudeField.setText("Location not available");
             longitudeField.setText("Location not available");
+            altitudeField.setText("Location not available");
         }
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client2 = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
 
     /* Request updates at startup */
@@ -62,9 +95,51 @@ public class MainActivity extends Activity implements LocationListener {
     public void onLocationChanged(Location location) {
         int lat = (int) (location.getLatitude());
         int lng = (int) (location.getLongitude());
+        int alt = (int) (location.getAltitude());
+        String date;
+        String deviceId;
         latitudeField.setText(String.valueOf(lat));
         longitudeField.setText(String.valueOf(lng));
+        altitudeField.setText(String.valueOf(alt));
+
+
+        SimpleDateFormat SimpleDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
+
+        date = SimpleDate.format(new Date());
+        deviceId = "48086";
+
+
+        OkHttpClient client = new OkHttpClient();
+
+        MediaType mediaType = MediaType.parse("application/vnd.com.nsn.cumulocity.event+json;charset=UTF-8");
+        RequestBody body = RequestBody.create(mediaType, "{\n\t\"c8y_Position\": {\n    \t\"alt\": " + alt + ",\n      \t\"lng\": " + lng + ",\n      \t\"lat\": " + lat + " },\n\t\"time\":\"" + date + "\",\n    \"source\": {\n    \t\"id\":\"" + deviceId + "\" }, \n    \"type\": \"c8y_LocationUpdate\",\n  \"text\": \"LocUpdate\"\n}");
+        Request request = new Request.Builder()
+                .url("https://cdm.ram.m2m.telekom.com/event/events")
+                .post(body)
+                .addHeader("authorization", ultraSecureEncodedDigest)
+                .addHeader("content-type", "application/vnd.com.nsn.cumulocity.event+json;charset=UTF-8")
+                .addHeader("accept", "application/vnd.com.nsn.cumulocity.event+json")
+                .build();
+
+        Response response = null;
+        try {
+            response = client.newCall(request).execute();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if (response.code() == 201) {
+            System.out.println("Send LocationUpdate: - alt: " + alt + " long: " + lng + " lat: " + lat);
+        } else {
+            System.out.println("Error: Could not send LocationUpdate, Error Code: " + response.code());
+        }
+
+
+
     }
+
+
+
 
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {
@@ -84,5 +159,45 @@ public class MainActivity extends Activity implements LocationListener {
         Toast.makeText(this, "Disabled provider " + provider,
                 Toast.LENGTH_SHORT).show();
         //test
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client2.connect();
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://sse_group1.gpstracker/http/host/path")
+        );
+        AppIndex.AppIndexApi.start(client2, viewAction);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://sse_group1.gpstracker/http/host/path")
+        );
+        AppIndex.AppIndexApi.end(client2, viewAction);
+        client2.disconnect();
     }
 }
